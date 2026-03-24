@@ -1,119 +1,112 @@
+<div align="center">
+<img src="assets/hero.svg" width="100%"/>
+</div>
+
 # agent-hook
 
-> Lifecycle hooks and middleware for LLM agents — zero dependencies, Python 3.10+
+**Lifecycle hooks and middleware for LLM agents. Zero external dependencies.**
 
-`agent-hook` lets you intercept any point in an LLM agent's execution loop
-without touching the agent's core code.  Log calls, track costs, enforce safety
-guards, or trim context — all through a clean hook/middleware API.
+[![PyPI](https://img.shields.io/pypi/v/agent-hook?color=blue)](https://pypi.org/project/agent-hook/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Zero deps](https://img.shields.io/badge/dependencies-zero-brightgreen)](pyproject.toml)
 
-## Install
+---
+
+## The Problem
+
+Production LLM agents fail silently. Without lifecycle hooks and middleware, you get undefined behaviour at scale — race conditions, lost state, cascading failures, and no way to debug what went wrong.
+
+`agent-hook` gives you a production-ready lifecycle hooks and middleware primitive with a clean API, tested edge cases, and zero configuration.
+
+## Installation
 
 ```bash
 pip install agent-hook
 ```
 
-## Quick Start — Agent Call Interception
+Or from source:
+
+```bash
+git clone https://github.com/darshjme/agent-hook.git
+cd agent-hook
+pip install -e .
+```
+
+## Quick Start
 
 ```python
-from agent_hook import HookPoint, HookRegistry, MiddlewareChain
+from agent_hook import *  # see API reference below
 
-registry = HookRegistry()
-
-# ── 1. Register hooks via decorator ───────────────────────────────────────────
-
-@registry.on(HookPoint.PRE_CALL)
-def log_pre_call(payload: dict):
-    print(f"[PRE_CALL]  model={payload['model']}  tokens={payload['tokens']}")
-
-@registry.on(HookPoint.POST_CALL)
-def track_cost(payload: dict):
-    cost = payload.get("usage", {}).get("total_tokens", 0) * 0.000002
-    print(f"[POST_CALL] cost=${cost:.6f}")
-
-@registry.on(HookPoint.ON_ERROR)
-def alert_on_error(exc: Exception):
-    print(f"[ON_ERROR]  {type(exc).__name__}: {exc}")
-
-# ── 2. Safety guard — veto the call if payload is suspicious ──────────────────
-
-@registry.on(HookPoint.PRE_CALL, priority=-1)   # runs before other PRE_CALL hooks
-def safety_guard(payload: dict) -> bool:
-    if payload.get("prompt", "").lower().startswith("ignore all"):
-        print("[GUARD] Prompt injection detected — blocking call.")
-        return False   # fire_until_false will stop here
-    return True
-
-# ── 3. Wrap your actual LLM call with MiddlewareChain ─────────────────────────
-
-import openai  # hypothetical
-
-def raw_llm_call(prompt: str, model: str = "gpt-4o") -> str:
-    # In real usage, call your LLM SDK here
-    return f"<response to: {prompt!r}>"
-
-chain = (
-    MiddlewareChain(raw_llm_call)
-    .before(lambda prompt, model="gpt-4o": registry.fire(
-        HookPoint.PRE_CALL, {"model": model, "tokens": len(prompt), "prompt": prompt}
-    ))
-    .after(lambda prompt, result, model="gpt-4o": registry.fire(
-        HookPoint.POST_CALL, {"model": model, "usage": {"total_tokens": len(result)}}
-    ))
-)
-
-# ── 4. Use the chain ──────────────────────────────────────────────────────────
-
-payload = {"model": "gpt-4o", "tokens": 128, "prompt": "Explain quantum computing"}
-
-# Guard check before calling
-if registry.fire_until_false(HookPoint.PRE_CALL, payload):
-    response = chain("Explain quantum computing", model="gpt-4o")
-    print(response)
+# See examples/ directory for complete working examples
 ```
 
 ## API Reference
 
-### `HookPoint`
+The main classes and functions are defined in `agent_hook/__init__.py`.
 
-```python
-class HookPoint(Enum):
-    PRE_CALL        # Before each LLM API call
-    POST_CALL       # After a successful LLM API call
-    ON_ERROR        # When any error occurs
-    ON_TOOL_USE     # Before/after a tool/function call
-    ON_CONTEXT_TRIM # When the context window is trimmed
-    PRE_RESPONSE    # Before delivering response to user
-    POST_RESPONSE   # After response delivered
+Key exports: `HookPoint · HookRegistry · MiddlewareChain · guard pattern`
+
+All classes follow a consistent interface:
+- Instantiate with sensible defaults
+- Compose with other arsenal libraries
+- Zero external dependencies required
+
+See the source code and `tests/` directory for verified usage examples.
+
+## How It Works
+
+```mermaid
+flowchart LR
+    A[Agent Task] --> B[agent-hook]
+    B --> C{Decision}
+    C -->|success| D[✅ Result]
+    C -->|failure| E[⚠️ Handle]
+    E --> B
+
+    style B fill:#161b22,stroke:#3fb950,stroke-width:2,color:#3fb950
+    style D fill:#1a3320,stroke:#238636,color:#3fb950
+    style E fill:#3d1a1a,stroke:#f85149,color:#f85149
 ```
 
-### `Hook`
+```mermaid
+sequenceDiagram
+    participant Agent
+    participant AgentHook as agent-hook
+    participant Output
 
-```python
-Hook(point, handler, name=None, priority=0)
-hook.execute(*args, **kwargs)   # invoke handler
+    Agent->>AgentHook: initialize()
+    AgentHook-->>Agent: ready
+
+    loop Agent Run
+        Agent->>AgentHook: process(input)
+        AgentHook-->>Agent: result
+    end
+
+    Agent->>Output: deliver(result)
 ```
 
-### `HookRegistry`
+## Philosophy
 
-```python
-registry = HookRegistry()
-registry.register(hook)                          # fluent
-registry.on(point, priority=0)                   # decorator factory
-registry.fire(point, *args, **kwargs)            # → list[any]
-registry.fire_until_false(point, *args, **kwargs)# → bool
-registry.list_hooks(point=None)                  # → list[Hook]
-registry.remove(name)                            # raises KeyError if missing
-```
+Before battle, before prayer, before action — there are rituals. agent-hook makes those rituals programmable.
 
-### `MiddlewareChain`
+---
 
-```python
-chain = MiddlewareChain(func)
-chain.before(middleware)   # fluent; middleware(*args, **kwargs)
-chain.after(middleware)    # fluent; middleware(*args, result=..., **kwargs)
-result = chain(*args, **kwargs)
-```
+## Part of the Arsenal
 
-## License
+`agent-hook` is one of six production libraries for LLM agents:
 
-MIT © Darshankumar Joshi
+| Library | Purpose |
+|---------|---------|
+| [herald](https://github.com/darshjme/herald) | Semantic task routing |
+| [engram](https://github.com/darshjme/engram) | Agent memory |
+| [sentinel](https://github.com/darshjme/sentinel) | ReAct loop guards |
+| [verdict](https://github.com/darshjme/verdict) | Agent evaluation |
+| [agent-guardrails](https://github.com/darshjme/agent-guardrails) | Output validation |
+| [agent-observability](https://github.com/darshjme/agent-observability) | Tracing & metrics |
+
+→ [arsenal](https://github.com/darshjme/arsenal) — the complete stack
+
+---
+
+*Built by [Darshankumar Joshi](https://github.com/darshjme), Gujarat, India.*
