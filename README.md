@@ -4,20 +4,15 @@
 
 # agent-hook
 
-**Lifecycle hooks and middleware for LLM agents. Zero external dependencies.**
+**Lifecycle hooks and middleware for LLM agents**
 
-[![PyPI](https://img.shields.io/pypi/v/agent-hook?color=blue)](https://pypi.org/project/agent-hook/)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Zero deps](https://img.shields.io/badge/dependencies-zero-brightgreen)](pyproject.toml)
+[![PyPI version](https://img.shields.io/pypi/v/agent-hook?color=purple&style=flat-square)](https://pypi.org/project/agent-hook/) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square)](https://python.org) [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE) [![Tests](https://img.shields.io/badge/tests-passing-brightgreen?style=flat-square)](#)
 
 ---
 
 ## The Problem
 
-Production LLM agents fail silently. Without lifecycle hooks and middleware, you get undefined behaviour at scale — race conditions, lost state, cascading failures, and no way to debug what went wrong.
-
-`agent-hook` gives you a production-ready lifecycle hooks and middleware primitive with a clean API, tested edge cases, and zero configuration.
+Without lifecycle hooks, cross-cutting concerns like logging, auth checks, and rate limiting get copy-pasted into every handler. One missed copy means a security gap; one wrong order means a race condition.
 
 ## Installation
 
@@ -25,88 +20,92 @@ Production LLM agents fail silently. Without lifecycle hooks and middleware, you
 pip install agent-hook
 ```
 
-Or from source:
-
-```bash
-git clone https://github.com/darshjme/agent-hook.git
-cd agent-hook
-pip install -e .
-```
-
 ## Quick Start
 
 ```python
-from agent_hook import *  # see API reference below
+from agent_hook import Hook, HookPoint, MiddlewareChain
 
-# See examples/ directory for complete working examples
+# Initialise
+instance = Hook(name="my_agent")
+
+# Use
+# see API reference below
+print(result)
 ```
 
 ## API Reference
 
-The main classes and functions are defined in `agent_hook/__init__.py`.
+### `Hook`
 
-Key exports: `HookPoint · HookRegistry · MiddlewareChain · guard pattern`
+```python
+class Hook:
+    """A single lifecycle handler bound to a HookPoint.
+    def __init__(
+    def execute(self, *args: Any, **kwargs: Any) -> Any:
+        """Invoke the handler with the given arguments."""
+    def __repr__(self) -> str:  # pragma: no cover
+```
 
-All classes follow a consistent interface:
-- Instantiate with sensible defaults
-- Compose with other arsenal libraries
-- Zero external dependencies required
+### `HookPoint`
 
-See the source code and `tests/` directory for verified usage examples.
+```python
+class HookPoint(Enum):
+    """Lifecycle points at which hooks can be registered."""
+```
+
+### `MiddlewareChain`
+
+```python
+class MiddlewareChain:
+    """Wraps a target callable with ordered before/after middleware layers.
+    def __init__(self, func: Callable) -> None:
+    def before(self, middleware: Callable) -> "MiddlewareChain":
+        """Append a *before* middleware and return self for fluent chaining."""
+    def after(self, middleware: Callable) -> "MiddlewareChain":
+        """Append an *after* middleware and return self for fluent chaining."""
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        """Execute the full before → func → after pipeline."""
+```
+
 
 ## How It Works
 
+### Flow
+
 ```mermaid
 flowchart LR
-    A[Agent Task] --> B[agent-hook]
-    B --> C{Decision}
-    C -->|success| D[✅ Result]
-    C -->|failure| E[⚠️ Handle]
-    E --> B
-
-    style B fill:#161b22,stroke:#3fb950,stroke-width:2,color:#3fb950
-    style D fill:#1a3320,stroke:#238636,color:#3fb950
-    style E fill:#3d1a1a,stroke:#f85149,color:#f85149
+    A[User Code] -->|create| B[Hook]
+    B -->|configure| C[HookPoint]
+    C -->|execute| D{Success?}
+    D -->|yes| E[Return Result]
+    D -->|no| F[Error Handler]
+    F --> G[Fallback / Retry]
+    G --> C
 ```
+
+### Sequence
 
 ```mermaid
 sequenceDiagram
-    participant Agent
-    participant AgentHook as agent-hook
-    participant Output
+    participant App
+    participant Hook
+    participant HookPoint
 
-    Agent->>AgentHook: initialize()
-    AgentHook-->>Agent: ready
-
-    loop Agent Run
-        Agent->>AgentHook: process(input)
-        AgentHook-->>Agent: result
-    end
-
-    Agent->>Output: deliver(result)
+    App->>+Hook: initialise()
+    Hook->>+HookPoint: configure()
+    HookPoint-->>-Hook: ready
+    App->>+Hook: run(context)
+    Hook->>+HookPoint: execute(context)
+    HookPoint-->>-Hook: result
+    Hook-->>-App: WorkflowResult
 ```
 
 ## Philosophy
 
-Before battle, before prayer, before action — there are rituals. agent-hook makes those rituals programmable.
+> *Sankalpa* — the sacred intention set before ritual — is the hook that fires before and after every action.
 
 ---
 
-## Part of the Arsenal
-
-`agent-hook` is one of six production libraries for LLM agents:
-
-| Library | Purpose |
-|---------|---------|
-| [herald](https://github.com/darshjme/herald) | Semantic task routing |
-| [engram](https://github.com/darshjme/engram) | Agent memory |
-| [sentinel](https://github.com/darshjme/sentinel) | ReAct loop guards |
-| [verdict](https://github.com/darshjme/verdict) | Agent evaluation |
-| [agent-guardrails](https://github.com/darshjme/agent-guardrails) | Output validation |
-| [agent-observability](https://github.com/darshjme/agent-observability) | Tracing & metrics |
-
-→ [arsenal](https://github.com/darshjme/arsenal) — the complete stack
-
----
+*Part of the [arsenal](https://github.com/darshjme/arsenal) — production stack for LLM agents.*
 
 *Built by [Darshankumar Joshi](https://github.com/darshjme), Gujarat, India.*
