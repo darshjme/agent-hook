@@ -1,18 +1,32 @@
 <div align="center">
-<img src="assets/hero.svg" width="100%"/>
+
+<img src="assets/agent-hook-hero.png" alt="agent-hook — Vedic Arsenal" width="100%" />
+
+# 🔮 agent-hook
+
+### *संस्कार* — Samskara — the hooks of karmic conditioning
+
+**Lifecycle hooks and middleware for LLM agents — HookPoint, HookRegistry, MiddlewareChain, guard pattern. Zero dependencies.**
+
+[![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=flat-square&logo=python)](https://python.org)
+[![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero-brightgreen?style=flat-square)](https://github.com/darshjme/agent-hook)
+[![Tests](https://img.shields.io/badge/Tests-Passing-success?style=flat-square)](https://github.com/darshjme/agent-hook/actions)
+[![License](https://img.shields.io/badge/License-MIT-purple?style=flat-square)](LICENSE)
+[![Vedic Arsenal](https://img.shields.io/badge/Vedic%20Arsenal-100%20libs-purple?style=flat-square)](https://github.com/darshjme/arsenal)
+
+*Part of the [**Vedic Arsenal**](https://github.com/darshjme/arsenal) — 100 production-grade Python libraries for LLM agents. Zero dependencies. Battle-tested.*
+
 </div>
-
-# agent-hook
-
-**Lifecycle hooks and middleware for LLM agents**
-
-[![PyPI version](https://img.shields.io/pypi/v/agent-hook?color=purple&style=flat-square)](https://pypi.org/project/agent-hook/) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square)](https://python.org) [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE) [![Tests](https://img.shields.io/badge/tests-passing-brightgreen?style=flat-square)](#)
 
 ---
 
-## The Problem
+## Overview
 
-Without lifecycle hooks, cross-cutting concerns like logging, auth checks, and rate limiting get copy-pasted into every handler. One missed copy means a security gap; one wrong order means a race condition.
+`agent-hook` implements **lifecycle hooks and middleware for llm agents — hookpoint, hookregistry, middlewarechain, guard pattern. zero dependencies.**
+
+Inspired by the Vedic principle of *संस्कार* (Samskara), this library brings the ancient wisdom of structured discipline to modern LLM agent engineering.
+
+No external dependencies. Pure Python 3.8+. Drop it in anywhere.
 
 ## Installation
 
@@ -20,92 +34,67 @@ Without lifecycle hooks, cross-cutting concerns like logging, auth checks, and r
 pip install agent-hook
 ```
 
+Or clone directly:
+```bash
+git clone https://github.com/darshjme/agent-hook.git
+cd agent-hook
+pip install -e .
+```
+
 ## Quick Start
 
 ```python
-from agent_hook import Hook, HookPoint, MiddlewareChain
+from hook import *
 
-# Initialise
-instance = Hook(name="my_agent")
-
-# Use
-# see API reference below
-print(result)
+# Initialize
+# See examples/ for full usage patterns
 ```
 
-## API Reference
+## Why `agent-hook`?
 
-### `Hook`
+Production LLM systems fail in predictable ways. `agent-hook` solves the **hook** failure mode with:
 
-```python
-class Hook:
-    """A single lifecycle handler bound to a HookPoint.
-    def __init__(
-    def execute(self, *args: Any, **kwargs: Any) -> Any:
-        """Invoke the handler with the given arguments."""
-    def __repr__(self) -> str:  # pragma: no cover
+- **Zero dependencies** — no version conflicts, no bloat
+- **Battle-tested patterns** — extracted from real production systems
+- **Type-safe** — full type hints, mypy-compatible
+- **Minimal surface area** — one job, done well
+- **Composable** — works with any LLM framework (LangChain, LlamaIndex, raw OpenAI, etc.)
+
+## The Vedic Arsenal
+
+`agent-hook` is part of **[darshjme/arsenal](https://github.com/darshjme/arsenal)** — a collection of 100 focused Python libraries for LLM agent infrastructure.
+
+Each library solves exactly one problem. Together they form a complete stack.
+
+```
+pip install agent-hook  # this library
+# Browse all 100: https://github.com/darshjme/arsenal
 ```
 
-### `HookPoint`
+## Contributing
 
-```python
-class HookPoint(Enum):
-    """Lifecycle points at which hooks can be registered."""
-```
+Found a bug? Have an improvement?
 
-### `MiddlewareChain`
+1. Fork the repo
+2. Create a feature branch (`git checkout -b fix/your-fix`)
+3. Add tests
+4. Open a PR
 
-```python
-class MiddlewareChain:
-    """Wraps a target callable with ordered before/after middleware layers.
-    def __init__(self, func: Callable) -> None:
-    def before(self, middleware: Callable) -> "MiddlewareChain":
-        """Append a *before* middleware and return self for fluent chaining."""
-    def after(self, middleware: Callable) -> "MiddlewareChain":
-        """Append an *after* middleware and return self for fluent chaining."""
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        """Execute the full before → func → after pipeline."""
-```
+All contributions welcome. Keep it zero-dependency.
 
+## License
 
-## How It Works
-
-### Flow
-
-```mermaid
-flowchart LR
-    A[User Code] -->|create| B[Hook]
-    B -->|configure| C[HookPoint]
-    C -->|execute| D{Success?}
-    D -->|yes| E[Return Result]
-    D -->|no| F[Error Handler]
-    F --> G[Fallback / Retry]
-    G --> C
-```
-
-### Sequence
-
-```mermaid
-sequenceDiagram
-    participant App
-    participant Hook
-    participant HookPoint
-
-    App->>+Hook: initialise()
-    Hook->>+HookPoint: configure()
-    HookPoint-->>-Hook: ready
-    App->>+Hook: run(context)
-    Hook->>+HookPoint: execute(context)
-    HookPoint-->>-Hook: result
-    Hook-->>-App: WorkflowResult
-```
-
-## Philosophy
-
-> *Sankalpa* — the sacred intention set before ritual — is the hook that fires before and after every action.
+MIT — use freely, build freely.
 
 ---
 
-*Part of the [arsenal](https://github.com/darshjme/arsenal) — production stack for LLM agents.*
+<div align="center">
 
-*Built by [Darshankumar Joshi](https://github.com/darshjme), Gujarat, India.*
+**Built with 🔮 by [Darshankumar Joshi](https://github.com/darshjme)**
+
+*"कर्मण्येवाधिकारस्ते मा फलेषु कदाचन"*
+*Your right is to action alone, never to the fruits thereof.*
+
+[Arsenal](https://github.com/darshjme/arsenal) · [GitHub](https://github.com/darshjme) · [Twitter](https://twitter.com/thedarshanjoshi)
+
+</div>
